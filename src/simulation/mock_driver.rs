@@ -1,10 +1,8 @@
 use crate::{
+    market::{mock_price_feed::MockPriceFeed, grid_cross_detector::GridCrossDetector},
+    execution::mock_executor::MockExecutor,
     strategy::{grid::GridConfig, state_machine::GridStateMachine},
-    types::{
-        event::Event,
-        intent::{TradeResult, Side},
-        grid_state::GridState,
-    },
+    engine::event_loop::Engine,
 };
 
 pub fn run_mock() {
@@ -15,56 +13,25 @@ pub fn run_mock() {
         amount_per_grid: 1.0,
     };
 
-    let mut sm = GridStateMachine::new(grid);
+    let feed = MockPriceFeed::new(vec![
+        100.0,
+        97.0,
+        95.0, // 下穿 grid 3
+        99.0, // 回升
+    ]);
 
-    // ===== 初始状态 =====
-    println!("Initial state: {:?}", sm.state);
-    assert_eq!(sm.state, GridState::Idle);
+    let detector = GridCrossDetector::new(grid.clone());
+    let strategy = GridStateMachine::new(grid);
+    let executor = MockExecutor::new();
 
-    // ===== Step 1：价格触发 =====
-    let buy_intent = sm.handle_event(Event::PriceCrossed { grid_index: 3 });
-    println!("After PriceCrossed:");
-    println!("  State  = {:?}", sm.state);
-    println!("  Intent = {:?}", buy_intent);
+    let mut engine = Engine::new(
+        feed, 
+        detector, 
+        strategy, 
+        executor
+    );
 
-    assert!(buy_intent.is_some());
-    assert_eq!(sm.state, GridState::BuySubmitted);
-
-    let buy_intent = buy_intent.unwrap();
-
-    // ===== Step 2：模拟 Buy 成交 =====
-    let sell_intent = sm.handle_event(Event::TxConfirmed {
-        result: TradeResult {
-            side: Side::Buy,
-            price: buy_intent.price,
-            amount: buy_intent.amount,
-        },
-    });
-
-    println!("After Buy TxConfirmed:");
-    println!("  State  = {:?}", sm.state);
-    println!("  Intent = {:?}", sell_intent);
-
-    assert!(sell_intent.is_some());
-    assert_eq!(sm.state, GridState::SellSubmitted);
-
-    let sell_intent = sell_intent.unwrap();
-
-    // ===== Step 3：模拟 Sell 成交（回补完成） =====
-    let final_intent = sm.handle_event(Event::TxConfirmed {
-        result: TradeResult {
-            side: Side::Sell,
-            price: sell_intent.price,
-            amount: sell_intent.amount,
-        },
-    });
-
-    println!("After Sell TxConfirmed:");
-    println!("  State  = {:?}", sm.state);
-    println!("  Intent = {:?}", final_intent);
-
-    assert!(final_intent.is_none());
-    assert_eq!(sm.state, GridState::WaitingBuy);
-
-    println!("✅ Grid trading loop completed successfully");
+    for _ in 0..10 {
+        engine.run();
+    }
 }
