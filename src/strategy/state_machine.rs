@@ -1,68 +1,84 @@
+use std::collections::HashMap;
+
 use crate::types::{
-    grid_state::GridState,
     event::Event,
     intent::{TradeIntent, Side},
+    grid_state::GridState,
 };
-use crate::strategy::grid::GridConfig;
+use crate::strategy::{grid::GridConfig, grid_slot::GridSlot};
 
 pub struct GridStateMachine {
-    pub state: GridState,
     pub grid: GridConfig,
-    pub current_index: Option<usize>,
+    pub slots: HashMap<usize, GridSlot>,
 }
 
 impl GridStateMachine {
     pub fn new(grid: GridConfig) -> Self {
+        let mut slots = HashMap::new();
+
+        for i in 0..grid.grid_count {
+            slots.insert(i, GridSlot::new(i));
+        }
+
         Self {
-            state: GridState::Idle,
             grid,
-            current_index: None,
+            slots,
         }
     }
 
-    pub fn handle_event(&mut self, event: Event) -> Option<TradeIntent> {
-        match (self.state, event) {
+    pub fn handle_event(&mut self, event: Event) -> Vec<TradeIntent> {
+        let mut intents = Vec::new();
 
-            (GridState::Idle, Event::PriceCrossed { grid_index }) => {
-                let price = self.grid.grid_price(grid_index);
-                self.state = GridState::BuySubmitted;
-                self.current_index = Some(grid_index);
+        match event {
+        Event::PriceCrossed { grid_index } => {
+            if let Some(slot) = self.slots.get_mut(&grid_index) {
+                if slot.state == GridState::WaitingBuy {
+                    let price = self.grid.grid_price(grid_index);
 
-                Some(TradeIntent {
-                    side: Side::Buy,
-                    price,
-                    amount: self.grid.amount_per_grid,
-                })
+                    slot.state = GridState::BuySubmitted;
+
+                    intents.push(TradeIntent {
+                        side: Side::Buy,
+                        price,
+                        amount: self.grid.amount_per_grid,
+                    });
+                }
             }
-
-            (GridState::BuySubmitted, Event::TxConfirmed { result }) => {
-                self.state = GridState::BuyFilled;
-
-                let sell_index = self.current_index.unwrap() + 1;
-                let price = self.grid.grid_price(sell_index);
-
-                self.state = GridState::SellSubmitted;
-
-                Some(TradeIntent {
-                    side: Side::Sell,
-                    price,
-                    amount: result.amount,
-                })
-            }
-
-            (GridState::SellSubmitted, Event::TxConfirmed { .. }) => {
-                self.state = GridState::WaitingBuy;
-                self.current_index = None;
-                None
-            }
-
-            (_, Event::TxFailed { reason }) => {
-                println!("Tx failed: {}", reason);
-                self.state = GridState::Paused;
-                None
-            }
-
-            _ => None,
         }
+        Event::TxConfirmed { result } => {
+            match result.side {
+                Side::Buy => {
+                    // 找到对应买入 slot
+                    for slot in self.slots.values_mut() {
+                        if slot.state == GridState::BuySubmitted {
+                            slot.state = GridState::WaitingSell;
+
+                            let sell_price =
+                                self.grid.grid_price(slot.index + 1);
+
+                            intents.push(TradeIntent {
+                                side: Side::Sell,
+                                price: sell_price,
+                                amount: result.amount,
+                            });
+                            break;
+                        }
+                    }
+                }
+
+                Side::Sell => {
+                    for slot in self.slots.values_mut() {
+                        if slot.state == GridState::WaitingSell {
+                            slot.state = GridState::WaitingBuy;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        _ => {}
+        }
+
+        intents
     }
 }

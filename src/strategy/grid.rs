@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct GridConfig {
     pub price_low: f64,
     pub price_high: f64,
