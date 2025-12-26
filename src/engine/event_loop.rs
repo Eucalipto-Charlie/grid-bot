@@ -31,6 +31,17 @@ where
         }
     }
 
+    pub fn debug_snapshot(&self) {
+        println!("--- Engine Snapshot ---");
+
+        for (idx, slot) in self.strategy.slots.iter() {
+            println!("Grid {} => {:?}", idx, slot.state);
+        }
+
+        println!("Orders mapping: {:?}", self.strategy.orders);
+        println!("-----------------------");
+    }
+
     pub fn run(&mut self) {
         // 1. 拉价格
         if let Some(price) = self.feed.poll_price() {
