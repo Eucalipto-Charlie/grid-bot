@@ -7,10 +7,12 @@ pub enum Event {
     },
 
     TxConfirmed {
+        order_id: u64,
         result: TradeResult,
     },
 
     TxFailed {
+        order_id: u64,
         reason: String,
     },
 }
