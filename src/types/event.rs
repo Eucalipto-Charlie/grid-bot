@@ -2,6 +2,10 @@ use crate::types::intent::TradeResult;
 
 #[derive(Debug)]
 pub enum Event {
+    PriceTick {
+        price: f64,
+    },
+
     PriceCrossed {
         grid_index: usize,
     },
