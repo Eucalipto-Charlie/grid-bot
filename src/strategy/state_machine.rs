@@ -10,6 +10,7 @@ use crate::strategy::{grid::GridConfig, grid_slot::GridSlot};
 pub struct GridStateMachine {
     pub grid: GridConfig,
     pub slots: HashMap<usize, GridSlot>,
+    pub orders: HashMap<u64, usize>,
 }
 
 impl GridStateMachine {
@@ -23,6 +24,7 @@ impl GridStateMachine {
         Self {
             grid,
             slots,
+            orders: HashMap::new(),
         }
     }
 
@@ -34,10 +36,16 @@ impl GridStateMachine {
             if let Some(slot) = self.slots.get_mut(&grid_index) {
                 if slot.state == GridState::WaitingBuy {
                     let price = self.grid.grid_price(grid_index);
+                    let order_id = rand::random::<u64>();
 
                     slot.state = GridState::BuySubmitted;
 
+                    // 关键：记录映射
+                    self.orders.insert(order_id, grid_index);
+
                     intents.push(TradeIntent {
+                        order_id,
+                        grid_index,
                         side: Side::Buy,
                         price,
                         amount: self.grid.amount_per_grid,
@@ -45,37 +53,40 @@ impl GridStateMachine {
                 }
             }
         }
-        Event::TxConfirmed { result } => {
-            match result.side {
-                Side::Buy => {
-                    // 找到对应买入 slot
-                    for slot in self.slots.values_mut() {
-                        if slot.state == GridState::BuySubmitted {
-                            slot.state = GridState::WaitingSell;
+        Event::TxConfirmed { order_id, result } => {
+            // 用 order_id 精确定位 grid
+            if let Some(&grid_index) = self.orders.get(&order_id) {
+                let slot = self.slots.get_mut(&grid_index).unwrap();
 
-                            let sell_price =
-                                self.grid.grid_price(slot.index + 1);
+                match result.side {
+                    Side::Buy => {
+                        slot.state = GridState::WaitingSell;
 
-                            intents.push(TradeIntent {
-                                side: Side::Sell,
-                                price: sell_price,
-                                amount: result.amount,
-                            });
-                            break;
-                        }
+                        let sell_price = self.grid.grid_price(grid_index + 1);
+                        let new_order_id = rand::random::<u64>();
+
+                        // 记录新的 Sell 订单
+                        self.orders.insert(new_order_id, grid_index);
+
+                        intents.push(TradeIntent {
+                            order_id: new_order_id,
+                            grid_index,
+                            side: Side::Sell,
+                            price: sell_price,
+                            amount: result.amount,
+                        });
                     }
-                }
 
-                Side::Sell => {
-                    for slot in self.slots.values_mut() {
-                        if slot.state == GridState::WaitingSell {
-                            slot.state = GridState::WaitingBuy;
-                            break;
-                        }
+                    Side::Sell => {
+                        slot.state = GridState::WaitingBuy;
+
+                        // Sell 完成，清理映射
+                        self.orders.remove(&order_id);
                     }
                 }
             }
         }
+
         _ => {}
         }
 
