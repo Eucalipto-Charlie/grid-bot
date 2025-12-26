@@ -43,28 +43,29 @@ where
     }
 
     pub fn run(&mut self) {
-        // 1. 拉价格
+        let mut events = Vec::new();
+
+        // 1. 拉价格 → PriceTick
         if let Some(price) = self.feed.poll_price() {
-            // 2. 检测跨格
+            events.push(Event::PriceTick { price });
+
+            // 2. Detector 基于 price 生成 PriceCrossed
             let crossed = self.detector.on_price(price);
-
             for idx in crossed {
-                let intents = self.strategy.handle_event(
-                    Event::PriceCrossed { grid_index: idx },
-                );
-
-                for intent in intents {
-                    self.executor.submit(intent);
-                }
+                events.push(Event::PriceCrossed { grid_index: idx });
             }
         }
 
-        // 3. 拉执行结果
-        for event in self.executor.poll_events() {
+        // 3. Executor 回执
+        events.extend(self.executor.poll_events());
+
+        // 4. 统一派发
+        for event in events {
             let intents = self.strategy.handle_event(event);
             for intent in intents {
                 self.executor.submit(intent);
             }
         }
     }
+
 }
