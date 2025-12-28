@@ -16,8 +16,8 @@ pub fn run_mock() {
     let feed = MockPriceFeed::new(vec![
         100.0,
         97.0,
-        95.0, // 下穿 grid 3
-        99.0, // 回升
+        95.0, 
+        99.0, 
     ]);
 
     let detector = GridCrossDetector::new(grid.clone());
@@ -35,3 +35,4 @@ pub fn run_mock() {
         engine.run();
     }
 }
+
