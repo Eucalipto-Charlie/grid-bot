@@ -22,7 +22,7 @@ pub fn run_basic_grid_scenario() {
     let feed = MockPriceFeed::new(vec![100.0, 97.0, 95.0, 99.0]);
     let detector = GridCrossDetector::new(grid);
 
-    // 使用支持乱序 / order_id 的 MockExecutor
+    // 支持乱序 order_id 的 MockExecutor
     let executor = MockExecutor::new();
 
     let mut engine = Engine::new(feed, detector, strategy, executor);
@@ -31,12 +31,13 @@ pub fn run_basic_grid_scenario() {
     for round in 0..10 {
         println!("\n=== Engine run round {} ===", round + 1);
 
-        // 1. Engine 执行一轮
+        //Engine 执行一轮
         engine.run();
 
-        // 2. 通过 Engine 提供的调试接口观察内部状态
+        //通过 Engine 提供的调试接口观察内部状态
         engine.debug_snapshot();
     }
 
     println!("\n✅ basic grid scenario finished (乱序验证版)");
 }
+
