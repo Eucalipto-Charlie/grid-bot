@@ -10,6 +10,10 @@ pub enum Event {
         grid_index: usize,
     },
 
+    TxSubmitted {
+        order_id: u64,
+    },
+
     TxConfirmed {
         order_id: u64,
         result: TradeResult,
