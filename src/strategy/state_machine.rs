@@ -56,7 +56,7 @@ impl GridStateMachine {
                             amount: self.grid.amount_per_grid,
                         };
 
-                        // Phase 2-D: 持久化 TradeIntent
+                        // 持久化 TradeIntent
                         self.trade_intents.push(intent.clone());
 
                         intents.push(intent);
@@ -100,7 +100,7 @@ impl GridStateMachine {
                             }
                         }
 
-                        // Phase 2-D: 持久化 TradeResult
+                        //持久化 TradeResult
                         self.trade_results.push(TradeResult {
                             order_id,
                             grid_index,
@@ -122,11 +122,11 @@ impl GridStateMachine {
                         slot.transit(GridState::WaitingBuy);
                     }
 
-                    // Phase 2-D: 持久化失败 TradeResult
+                    // 持久化失败 TradeResult
                     self.trade_results.push(TradeResult {
                         order_id,
                         grid_index,
-                        side: Side::Buy, // 或从原始 TradeIntent 获取 side
+                        side: Side::Buy, // 从原始 TradeIntent 获取 side
                         price: 0.0,      // 可以记录失败时的预估价格
                         amount: 0.0,
                         success: false,
@@ -158,4 +158,5 @@ impl GridStateMachine {
     pub fn last_result(&self) -> Option<&TradeResult> {
         self.trade_results.last()
     }
+
 }
