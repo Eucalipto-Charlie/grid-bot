@@ -38,6 +38,7 @@ pub fn run_basic_grid_scenario() {
         engine.debug_snapshot();
     }
 
-    println!("\n✅ basic grid scenario finished (乱序验证版)");
+    println!("\nbasic grid scenario finished (乱序验证)");
 }
+
 
