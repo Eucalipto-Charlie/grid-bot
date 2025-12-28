@@ -8,16 +8,16 @@ use crate::types::{
 };
 
 pub struct MockExecutor {
-    /// Strategy 刚 submit 的订单
+    //Strategy 刚 submit 的订单
     pending: VecDeque<TradeIntent>,
 
-    /// 已被交易所接收（Submitted），但尚未成交
+    //已被交易所接收（Submitted），但尚未成交
     submitted: VecDeque<TradeIntent>,
 
-    /// 模拟网络 / 撮合延迟（可乱序）
+    //模拟网络 / 撮合延迟
     delayed: VecDeque<TradeIntent>,
 
-    /// 用于控制行为节奏
+    //用于控制行为节奏
     tick: u64,
 }
 
@@ -33,7 +33,7 @@ impl MockExecutor {
 }
 
 impl Executor for MockExecutor {
-    /// Strategy -> Executor（命令）
+    /// Strategy -> Executor
     fn submit(&mut self, intent: TradeIntent) {
         println!(
             "[Executor] submit order_id={} grid={} {:?}",
@@ -46,16 +46,13 @@ impl Executor for MockExecutor {
         self.pending.push_back(intent);
     }
 
-    /// Executor -> Strategy（事件）
+    /// Executor -> Strategy
     fn poll_events(&mut self) -> Vec<Event> {
         self.tick += 1;
         let mut events = Vec::new();
         let mut rng = rand::thread_rng();
 
-        /* -------------------------------------------------------------
-         * ① pending -> submitted
-         *    必须产生 TxSubmitted
-         * -----------------------------------------------------------*/
+        //pending -> submitted，必须产生 TxSubmitted
         if self.tick % 2 == 0 {
             if let Some(intent) = self.pending.pop_front() {
                 let order_id = intent.order_id;
@@ -67,16 +64,14 @@ impl Executor for MockExecutor {
 
                 self.submitted.push_back(intent);
 
-                // ★ 关键：通知 Strategy 状态迁移
+                //通知 Strategy 状态迁移
                 events.push(Event::TxSubmitted {
                     order_id,
                 });
             }
         }
 
-        /* -------------------------------------------------------------
-         * ② submitted -> delayed（制造乱序，不发事件）
-         * -----------------------------------------------------------*/
+        //submitted -> delayed（制造乱序，不发事件）
         if self.tick % 3 == 0 {
             let mut batch: Vec<_> = self.submitted.drain(..).collect();
             batch.shuffle(&mut rng);
@@ -90,9 +85,7 @@ impl Executor for MockExecutor {
             }
         }
 
-        /* -------------------------------------------------------------
-         * ③ delayed -> confirmed（最终成交）
-         * -----------------------------------------------------------*/
+        //delayed -> confirmed（最终成交）
         if self.tick % 4 == 0 {
             if let Some(intent) = self.delayed.pop_front() {
                 println!(
@@ -118,3 +111,4 @@ impl Executor for MockExecutor {
         events
     }
 }
+
