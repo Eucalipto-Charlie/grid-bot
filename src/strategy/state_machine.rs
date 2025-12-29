@@ -56,7 +56,7 @@ impl GridStateMachine {
                             amount: self.grid.amount_per_grid,
                         };
 
-                        // 持久化 TradeIntent
+                        // Phase 2-D: 持久化 TradeIntent
                         self.trade_intents.push(intent.clone());
 
                         intents.push(intent);
@@ -100,7 +100,7 @@ impl GridStateMachine {
                             }
                         }
 
-                        //持久化 TradeResult
+                        // 持久化 TradeResult
                         self.trade_results.push(TradeResult {
                             order_id,
                             grid_index,
@@ -145,18 +145,4 @@ impl GridStateMachine {
 
         intents
     }
-
-
-    pub fn list_intents(&self) -> &[TradeIntent] {
-        &self.trade_intents
-    }
-
-    pub fn list_results(&self) -> &[TradeResult] {
-        &self.trade_results
-    }
-
-    pub fn last_result(&self) -> Option<&TradeResult> {
-        self.trade_results.last()
-    }
-
 }
