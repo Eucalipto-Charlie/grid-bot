@@ -1,6 +1,6 @@
 use crate::types::intent::TradeResult;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Event {
     PriceTick {
         price: f64,

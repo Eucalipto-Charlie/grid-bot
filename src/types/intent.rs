@@ -1,10 +1,12 @@
-#[derive(Debug, Clone, Copy)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Side {
     Buy,
     Sell,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeIntent {
     pub order_id: u64,
     pub grid_index: usize,
@@ -15,7 +17,7 @@ pub struct TradeIntent {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeResult {
     pub order_id: u64,
     pub grid_index: usize,
