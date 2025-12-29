@@ -6,9 +6,8 @@ use crate::{
         grid_cross_detector::GridCrossDetector,
     },
     strategy::{grid::GridConfig, state_machine::GridStateMachine},
+    persistence::hybrid_store::HybridTradeStore, 
 };
-
-use rand::seq::SliceRandom;
 
 pub fn run_basic_grid_scenario() {
     let grid = GridConfig {
@@ -22,23 +21,22 @@ pub fn run_basic_grid_scenario() {
     let feed = MockPriceFeed::new(vec![100.0, 97.0, 95.0, 99.0]);
     let detector = GridCrossDetector::new(grid);
 
-    // 支持乱序 order_id 的 MockExecutor
+    // 内存调试和文件持久化
+    let store = HybridTradeStore::new("./data");
+
     let executor = MockExecutor::new();
 
-    let mut engine = Engine::new(feed, detector, strategy, executor);
+    let mut engine = Engine::new(feed, detector, strategy, executor, store);
 
-    // 运行多轮，模拟真实引擎 loop
-    for round in 0..10 {
+    for round in 0..20 {
         println!("\n=== Engine run round {} ===", round + 1);
-
-        //Engine 执行一轮
         engine.run();
-
-        //通过 Engine 提供的调试接口观察内部状态
         engine.debug_snapshot();
     }
 
-    println!("\nbasic grid scenario finished (乱序验证)");
+    // 内存 dump 用于表格输出
+    engine.trade_store().dump();
+    engine.trade_store().dump_table();
+
+    println!("\nbasic grid scenario finished!");
 }
-
-

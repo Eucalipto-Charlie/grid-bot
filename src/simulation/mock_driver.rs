@@ -3,6 +3,7 @@ use crate::{
     execution::mock_executor::MockExecutor,
     strategy::{grid::GridConfig, state_machine::GridStateMachine},
     engine::event_loop::Engine,
+    persistence::memory_store::MemoryTradeStore,
 };
 
 pub fn run_mock() {
@@ -16,23 +17,24 @@ pub fn run_mock() {
     let feed = MockPriceFeed::new(vec![
         100.0,
         97.0,
-        95.0, 
-        99.0, 
+        95.0, // 下穿 grid 3
+        99.0, // 回升
     ]);
 
     let detector = GridCrossDetector::new(grid.clone());
     let strategy = GridStateMachine::new(grid);
     let executor = MockExecutor::new();
+    let store = MemoryTradeStore::new();
 
     let mut engine = Engine::new(
         feed, 
         detector, 
         strategy, 
-        executor
+        executor,
+        store,
     );
 
     for _ in 0..10 {
         engine.run();
     }
 }
-
