@@ -8,16 +8,16 @@ use crate::types::{
 };
 
 pub struct MockExecutor {
-    //Strategy 刚 submit 的订单
+    // Strategy刚submit的订单
     pending: VecDeque<TradeIntent>,
 
-    //已被交易所接收（Submitted），但尚未成交
+    // 已被交易所接收（Submitted），但尚未成交
     submitted: VecDeque<TradeIntent>,
 
-    //模拟网络 / 撮合延迟
+    // 模拟网络/撮合延迟（可能乱序）
     delayed: VecDeque<TradeIntent>,
 
-    //用于控制行为节奏
+    // 用于控制行为节奏
     tick: u64,
 }
 
@@ -52,7 +52,7 @@ impl Executor for MockExecutor {
         let mut events = Vec::new();
         let mut rng = rand::thread_rng();
 
-        //pending -> submitted，必须产生 TxSubmitted
+        //pending -> submitted,必须产生 TxSubmitted
         if self.tick % 2 == 0 {
             if let Some(intent) = self.pending.pop_front() {
                 let order_id = intent.order_id;
@@ -85,7 +85,7 @@ impl Executor for MockExecutor {
             }
         }
 
-        //delayed -> confirmed（最终成交）
+        // delayed -> confirmed
         if self.tick % 4 == 0 {
             if let Some(intent) = self.delayed.pop_front() {
                 println!(
@@ -111,4 +111,3 @@ impl Executor for MockExecutor {
         events
     }
 }
-
